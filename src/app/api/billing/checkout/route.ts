@@ -109,7 +109,6 @@ export async function POST(req: Request) {
       UPDATE subscriptions
       SET status = ${updated.status},
           plan = ${chosen.plan},
-          current_period_end = ${updated.current_period_end ?? null},
           stripe_subscription_id = ${updated.id},
           updated_at = NOW()
       WHERE user_id = ${userId}
@@ -133,3 +132,4 @@ export async function POST(req: Request) {
 
   return NextResponse.json({ url: session.url });
 }
+
