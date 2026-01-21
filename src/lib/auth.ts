@@ -14,16 +14,18 @@ function hmac(data: string) {
 }
 
 export function signSession(userId: string) {
+  // format: userId.timestamp.signature
   const ts = Date.now().toString();
   const payload = `${userId}.${ts}`;
   const sig = hmac(payload);
-  return `${payload}.${ts}.${sig}`.replace(`${ts}.${ts}`, ts); // safe formatting
+  return `${userId}.${ts}.${sig}`;
 }
 
 export function verifySession(token: string | undefined | null): string | null {
   if (!token) return null;
   const parts = token.split(".");
   if (parts.length !== 3) return null;
+
   const [userId, ts, sig] = parts;
   const payload = `${userId}.${ts}`;
   if (hmac(payload) !== sig) return null;

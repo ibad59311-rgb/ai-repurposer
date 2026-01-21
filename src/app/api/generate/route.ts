@@ -26,6 +26,7 @@ export async function POST(req: Request) {
   const parsed = Schema.safeParse(json);
   if (!parsed.success) return NextResponse.json({ error: "Invalid transcript" }, { status: 400 });
 
+  // decrement credit only if credits > 0
   const dec = await sql`
     UPDATE users
     SET credits = credits - 1
