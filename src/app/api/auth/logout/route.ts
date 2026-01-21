@@ -6,3 +6,4 @@ export async function POST() {
   res.cookies.set(cookieName, "", { httpOnly: true, sameSite: "lax", path: "/", maxAge: 0 });
   return res;
 }
+

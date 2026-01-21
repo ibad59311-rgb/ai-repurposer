@@ -8,11 +8,26 @@ type Me = { user: { id: string; email: string; credits: number; plan: Plan } | n
 
 export default function DashboardClient() {
   const [me, setMe] = useState<Me | null>(null);
-  const [loadingBilling, setLoadingBilling] = useState(false);
+  
+  // recent generations
+  const [recent, setRecent] = useState<any[] | null>(null);
+
+  async function loadRecent() {
+    try {
+      const r = await fetch("/api/generations", { cache: "no-store" });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) return setRecent([]);
+      setRecent(Array.isArray(j.items) ? j.items : []);
+    } catch {
+      setRecent([]);
+    }
+  }const [loadingBilling, setLoadingBilling] = useState(false);
 
   useEffect(() => {
-    fetch("/api/me").then(r => r.json()).then(setMe).catch(() => setMe({ user: null }));
-  }, []);
+fetch("/api/me").then(r => r.json()).then(setMe).catch(() => setMe({ user: null }));
+  
+  loadRecent();
+}, []);
 
   async function logout() {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -69,6 +84,30 @@ export default function DashboardClient() {
           </div>
         </div>
       )}
-    </main>
+            <div className="card p-4 mt-6">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-base font-semibold">Recent generations</h2>
+            <button className="btn btn-ghost text-sm" type="button" onClick={loadRecent}>Refresh</button>
+          </div>
+          <div className="mt-3">
+            {recent === null ? (
+              <div className="text-sm text-muted">Loading…</div>
+            ) : recent.length === 0 ? (
+              <div className="text-sm text-muted">No generations yet.</div>
+            ) : (
+              <div className="grid gap-2">
+                {recent.map((g: any) => (
+                  <a key={g.id} className="card p-3 hover:shadow-soft transition" href={`/g/${g.id}`}>
+                    <div className="text-xs text-muted">{String(g.created_at || "")}</div>
+                    <div className="text-sm mt-1 line-clamp-2">{String(g.input_preview || "")}</div>
+                  </a>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+</main>
   );
 }
+
+

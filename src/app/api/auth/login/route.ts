@@ -34,3 +34,4 @@ export async function POST(req: Request) {
   res.cookies.set(cookieName, token, { httpOnly: true, sameSite: "lax", path: "/" });
   return res;
 }
+

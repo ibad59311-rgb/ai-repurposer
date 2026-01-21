@@ -7,7 +7,7 @@ import { sql } from "@/lib/db";
 import { id } from "@/lib/ids";
 
 const Schema = z.object({
-  transcript: z.string().min(50).max(20000),
+  transcript: z.string().min(50).max(8000),
 });
 
 type Output = {
@@ -55,10 +55,10 @@ Return STRICT JSON only (no markdown, no commentary) with this schema:
 }
 
 Rules:
-- twitter_thread: 6–10 short posts, each <= 280 characters.
+- twitter_thread: 6–8 short posts, each <= 280 characters.
 - tiktok_script: 45–60 seconds, with hooks + beats + CTA.
 - youtube_title: punchy, <= 70 chars.
-- youtube_description: 2 short paragraphs + 5 bullets + 5 hashtags.
+- youtube_description: 1 short paragraph + 5 bullets + 5 hashtags.
 
 Transcript:
 """${transcript}"""
@@ -70,7 +70,8 @@ Transcript:
     const resp = await client.responses.create({
       model: "gpt-4.1-mini",
       input: prompt,
-    });
+      max_output_tokens: 700,
+});
     text = resp.output_text ?? null;
   } catch {
     await sql`UPDATE users SET credits = credits + 1 WHERE id = ${userId}`;
@@ -104,3 +105,4 @@ Transcript:
   const updated = await sql`SELECT credits FROM users WHERE id = ${userId} LIMIT 1`;
   return NextResponse.json({ ok: true, output: data, credits: updated.rows[0]?.credits ?? 0 });
 }
+

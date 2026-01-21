@@ -1,11 +1,11 @@
-﻿import { Suspense } from "react";
-import DashboardClient from "./DashboardClient";
+﻿export const dynamic = "force-dynamic";
 
-export const dynamic = "force-dynamic";
+import { Suspense } from "react";
+import DashboardClient from "./DashboardClient";
 
 export default function DashboardPage() {
   return (
-    <Suspense fallback={<p>Loading…</p>}>
+    <Suspense fallback={<div className="text-muted">Loading dashboard…</div>}>
       <DashboardClient />
     </Suspense>
   );
