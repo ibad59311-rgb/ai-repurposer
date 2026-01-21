@@ -15,7 +15,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <div style={{ marginLeft: "auto", display: "flex", gap: 12, flexWrap: "wrap" }}>
             <Link href="/pricing">Pricing</Link>
             <Link href="/dashboard">Dashboard</Link>
-            <Link href="/generate">Generate</Link>
+            <Link href="/support">Support</Link><Link href="/generate">Generate</Link>
             <Link href="/login">Login</Link>
             <Link href="/signup">Sign up</Link>
           </div>
@@ -46,3 +46,4 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     </span>
   </div>
 </footer>
+
