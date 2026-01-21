@@ -1,8 +1,28 @@
 ﻿"use client";
 
 import { useEffect, useState } from "react";
+
+async function manageBilling() {
+  const res = await fetch("/api/billing/portal", { method: "POST" });
+  const j = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    alert(j?.error || "Could not open billing portal");
+    return;
+  }
+  if (j.url) window.location.href = j.url;
+}
 import { useRouter, useSearchParams } from "next/navigation";
 
+
+async function manageBilling() {
+  const res = await fetch("/api/billing/portal", { method: "POST" });
+  const j = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    alert(j?.error || "Could not open billing portal");
+    return;
+  }
+  if (j.url) window.location.href = j.url;
+}
 type Plan = "free" | "starter" | "creator" | "pro";
 type Me = { user: { id: string; email: string; credits: number; plan: Plan } | null };
 
@@ -70,3 +90,4 @@ export default function DashboardClient() {
     </main>
   );
 }
+
