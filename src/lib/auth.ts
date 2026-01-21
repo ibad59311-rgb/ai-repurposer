@@ -37,3 +37,4 @@ export function verifySession(token: string | undefined | null): string | null {
 }
 
 export const cookieName = COOKIE_NAME;
+
