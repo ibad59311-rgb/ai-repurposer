@@ -35,3 +35,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     </html>
   );
 }
+<footer style={{ marginTop: 40, padding: "24px 16px", borderTop: "1px solid #eee", fontSize: 14, color: "#555" }}>
+  <div style={{ maxWidth: 920, margin: "0 auto", display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
+    <span>© {new Date().getFullYear()} AI Repurposer</span>
+    <span>
+      Support:{" "}
+      <a href="mailto:support.greensharkry@hotmail.com">
+        support.greensharkry@hotmail.com
+      </a>
+    </span>
+  </div>
+</footer>
