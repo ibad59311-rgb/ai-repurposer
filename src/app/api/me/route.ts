@@ -1,7 +1,7 @@
 ﻿import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { verifySession, cookieName } from "@/lib/auth";
-import { db } from "@/lib/db";
+import { sql } from "@/lib/db";
 import { ensureMonthlyCredits, getPlan } from "@/lib/credits";
 
 export async function GET() {
@@ -9,9 +9,17 @@ export async function GET() {
   const userId = verifySession(token);
   if (!userId) return NextResponse.json({ user: null }, { status: 200 });
 
-  ensureMonthlyCredits(userId);
-  const plan = getPlan(userId);
+  await ensureMonthlyCredits(userId);
+  const plan = await getPlan(userId);
 
-  const user = db.prepare("SELECT id, email, credits FROM users WHERE id = ?").get(userId) as { id: string; email: string; credits: number };
+  const { rows } = await sql`
+    SELECT id, email, credits
+    FROM users
+    WHERE id = ${userId}
+    LIMIT 1
+  `;
+  const user = rows[0] as { id: string; email: string; credits: number } | undefined;
+  if (!user) return NextResponse.json({ user: null }, { status: 200 });
+
   return NextResponse.json({ user: { ...user, plan } }, { status: 200 });
 }

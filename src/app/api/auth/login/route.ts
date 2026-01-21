@@ -1,7 +1,7 @@
 ﻿import { NextResponse } from "next/server";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
-import { db } from "@/lib/db";
+import { sql } from "@/lib/db";
 import { cookieName, signSession } from "@/lib/auth";
 
 const Schema = z.object({
@@ -14,8 +14,16 @@ export async function POST(req: Request) {
   const parsed = Schema.safeParse(json);
   if (!parsed.success) return NextResponse.json({ error: "Invalid input" }, { status: 400 });
 
-  const { email, password } = parsed.data;
-  const user = db.prepare("SELECT id, password_hash FROM users WHERE email = ?").get(email.toLowerCase()) as { id: string; password_hash: string } | undefined;
+  const email = parsed.data.email.toLowerCase();
+  const password = parsed.data.password;
+
+  const { rows } = await sql`
+    SELECT id, password_hash
+    FROM users
+    WHERE email = ${email}
+    LIMIT 1
+  `;
+  const user = rows[0] as { id: string; password_hash: string } | undefined;
   if (!user) return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
 
   const ok = await bcrypt.compare(password, user.password_hash);

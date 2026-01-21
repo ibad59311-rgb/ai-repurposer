@@ -1,7 +1,7 @@
 ﻿import { NextResponse } from "next/server";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
-import { db } from "@/lib/db";
+import { sql } from "@/lib/db";
 import { id } from "@/lib/ids";
 import { cookieName, signSession } from "@/lib/auth";
 
@@ -15,15 +15,19 @@ export async function POST(req: Request) {
   const parsed = Schema.safeParse(json);
   if (!parsed.success) return NextResponse.json({ error: "Invalid input" }, { status: 400 });
 
-  const { email, password } = parsed.data;
-  const existing = db.prepare("SELECT id FROM users WHERE email = ?").get(email.toLowerCase());
-  if (existing) return NextResponse.json({ error: "Email already in use" }, { status: 409 });
+  const email = parsed.data.email.toLowerCase();
+  const password = parsed.data.password;
+
+  const existing = await sql`SELECT id FROM users WHERE email = ${email} LIMIT 1`;
+  if (existing.rows.length) return NextResponse.json({ error: "Email already in use" }, { status: 409 });
 
   const userId = id("usr");
   const password_hash = await bcrypt.hash(password, 10);
 
-  db.prepare("INSERT INTO users (id, email, password_hash, credits) VALUES (?, ?, ?, 3)")
-    .run(userId, email.toLowerCase(), password_hash);
+  await sql`
+    INSERT INTO users (id, email, password_hash, credits)
+    VALUES (${userId}, ${email}, ${password_hash}, 3)
+  `;
 
   const token = signSession(userId);
   const res = NextResponse.json({ ok: true });

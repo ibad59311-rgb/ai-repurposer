@@ -1,5 +1,4 @@
 ﻿import crypto from "crypto";
-import { db } from "./db";
 
 const COOKIE_NAME = "session";
 
@@ -30,13 +29,11 @@ export function verifySession(token: string | undefined | null): string | null {
   const payload = `${userId}.${ts}`;
   if (hmac(payload) !== sig) return null;
 
-  // optional: expire after 14 days
+  // expire after 14 days
   const ageMs = Date.now() - Number(ts);
   if (!Number.isFinite(ageMs) || ageMs > 14 * 24 * 60 * 60 * 1000) return null;
 
-  // verify user exists
-  const row = db.prepare("SELECT id FROM users WHERE id = ?").get(userId) as { id: string } | undefined;
-  return row?.id ?? null;
+  return userId;
 }
 
 export const cookieName = COOKIE_NAME;
