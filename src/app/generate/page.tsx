@@ -9,9 +9,8 @@ type Output = {
   youtube_description: string;
 };
 
-type Me = {
-  user: { credits: number; plan: "free" | "starter" | "creator" | "pro" } | null;
-};
+type Plan = "free" | "starter" | "creator" | "pro";
+type Me = { user: { credits: number; plan: Plan } | null };
 
 export default function Generate() {
   const [me, setMe] = useState<Me | null>(null);
@@ -20,12 +19,12 @@ export default function Generate() {
   const [err, setErr] = useState<string | null>(null);
   const [out, setOut] = useState<Output | null>(null);
   const [credits, setCredits] = useState<number | null>(null);
-  const [plan, setPlan] = useState<Me["user"]["plan"] | null>(null);
+  const [plan, setPlan] = useState<Plan | null>(null);
 
   useEffect(() => {
     fetch("/api/me")
       .then((r) => r.json())
-      .then((j) => {
+      .then((j: Me) => {
         setMe(j);
         setCredits(j.user?.credits ?? null);
         setPlan(j.user?.plan ?? null);
@@ -69,7 +68,7 @@ export default function Generate() {
       ) : (
         <>
           <div style={{ padding: 12, border: "1px solid #ddd", borderRadius: 12 }}>
-            <p style={{ margin: 0 }}><b>Plan:</b> {plan}</p>
+            <p style={{ margin: 0 }}><b>Plan:</b> {plan ?? "—"}</p>
             <p style={{ margin: "6px 0 0" }}><b>Credits remaining:</b> {credits ?? "—"}</p>
             {!hasCredits && (
               <div style={{ marginTop: 10, padding: 10, border: "1px solid #f2c2c2", borderRadius: 10 }}>
