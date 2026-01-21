@@ -1,56 +1,52 @@
 ﻿export default function Terms() {
-  return (
-    <main style={{ display: "grid", gap: 10 }}>
-      <h1>Terms of Service</h1>
+return (
+<main style={{ maxWidth: 800 }}>
+<h1>Terms of Service</h1>
 
-      <p>
-        These Terms govern your access to and use of AI Repurposer (the “Service”). By using the Service, you agree to these Terms.
-      </p>
+<p>
+By using AI Repurposer, you agree to these Terms of Service.
+If you do not agree, please do not use the service.
+</p>
 
-      <h3>1. The Service</h3>
-      <p>
-        The Service generates marketing content from text you submit. Output quality can vary and should be reviewed before publishing.
-      </p>
+<h2>Service</h2>
+<p>
+AI Repurposer provides AI-generated content based on text you submit.
+Outputs are generated automatically and may not be accurate or complete.
+You are responsible for how you use the generated content.
+</p>
 
-      <h3>2. Your content and responsibility</h3>
-      <p>
-        You are responsible for (a) the content you submit, (b) how you use the output, and (c) compliance with applicable laws and platform policies.
-      </p>
+<h2>Accounts</h2>
+<p>
+You are responsible for maintaining the security of your account.
+Do not share your login details with others.
+</p>
 
-      <h3>3. Acceptable use</h3>
-      <p>
-        You may not misuse the Service, including attempting to bypass limits, reverse engineer, disrupt the Service, or use the Service for unlawful purposes.
-      </p>
+<h2>Payments</h2>
+<p>
+Paid subscriptions are billed in advance and managed through Stripe.
+You may cancel your subscription at any time via the customer portal.
+</p>
 
-      <h3>4. Accounts</h3>
-      <p>
-        You are responsible for maintaining the confidentiality of your account and for all activity under your account.
-      </p>
+<h2>Acceptable Use</h2>
+<p>
+You agree not to misuse the service, attempt to disrupt it,
+or use it for illegal or harmful purposes.
+</p>
 
-      <h3>5. Subscriptions and billing</h3>
-      <p>
-        Paid plans are billed in advance on a recurring monthly basis until cancelled. You can manage or cancel your subscription through the billing portal.
-      </p>
+<h2>Limitation of Liability</h2>
+<p>
+The service is provided “as is” without warranties of any kind.
+We are not liable for any damages resulting from use of the service.
+</p>
 
-      <h3>6. Availability and changes</h3>
-      <p>
-        We may modify, suspend, or discontinue any part of the Service at any time. We may also update these Terms from time to time.
-      </p>
-
-      <h3>7. Disclaimers</h3>
-      <p>
-        The Service is provided on an “as available” basis. To the maximum extent permitted by law, we disclaim all warranties, express or implied.
-      </p>
-
-      <h3>8. Limitation of liability</h3>
-      <p>
-        To the maximum extent permitted by law, we are not liable for indirect, incidental, special, consequential, or punitive damages, or any loss of profits or revenues.
-      </p>
-
-      <h3>9. Contact</h3>
-      <p>
-        For support or questions, contact: <b>support@yourdomain.com</b> (replace with your support email).
-      </p>
-    </main>
-  );
+<h2>Contact</h2>
+<p>
+For support or questions, contact
+<br />
+<a href="mailto:support.greensharkry@hotmail.com">
+support.greensharkry@hotmail.com
+</a>
+</p>
+</main>
+);
 }
