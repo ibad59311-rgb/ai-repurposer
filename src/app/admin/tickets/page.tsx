@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 
 type Ticket = {
   id: string;
@@ -15,20 +16,29 @@ type Ticket = {
 };
 
 export default function AdminTickets() {
-  const [adminKey, setAdminKey] = useState("");
   const [status, setStatus] = useState<"open" | "resolved" | "all">("open");
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const router = useRouter();
 
   async function load() {
     setErr(null);
     setBusy(true);
     try {
-      const res = await fetch(`/api/admin/tickets?status=${status}`, {
-        headers: { "x-admin-key": adminKey },
-      });
+      const res = await fetch(`/api/admin/tickets?status=${status}`);
       const j = await res.json().catch(() => ({}));
+
+      if (res.status === 401) {
+        // Could be logged out OR logged in but not admin.
+        // Check /api/me to decide where to route.
+        const me = await fetch("/api/me").then(r => r.json()).catch(() => ({ user: null }));
+        if (!me.user) router.push("/login");
+        else setErr("Not authorized for admin access.");
+        setTickets([]);
+        return;
+      }
+
       if (!res.ok) throw new Error(j.error || "Failed to load tickets");
       setTickets(j.tickets || []);
     } catch (e: any) {
@@ -44,7 +54,7 @@ export default function AdminTickets() {
     try {
       const res = await fetch("/api/admin/tickets/close", {
         method: "POST",
-        headers: { "content-type": "application/json", "x-admin-key": adminKey },
+        headers: { "content-type": "application/json" },
         body: JSON.stringify({ id }),
       });
       const j = await res.json().catch(() => ({}));
@@ -62,8 +72,8 @@ export default function AdminTickets() {
   }, [tickets]);
 
   useEffect(() => {
-    setTickets([]);
-    setErr(null);
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status]);
 
   return (
@@ -72,59 +82,35 @@ export default function AdminTickets() {
         <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
           <div>
             <h1 className="h2" style={{ marginBottom: 6 }}>Admin · Support Tickets</h1>
-            <p className="p">View and resolve tickets. Priority is auto-tagged for Creator/Pro.</p>
+            <p className="p">Tickets are visible only to admin accounts.</p>
           </div>
-          <a className="btn" href="/dashboard">Dashboard</a>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <a className="btn" href="/dashboard">Dashboard</a>
+            <button className="btn btn-primary" disabled={busy} onClick={load}>{busy ? "Loading…" : "Refresh"}</button>
+          </div>
         </div>
 
         <hr className="hr" />
 
-        <div className="split">
-          <div className="section">
-            <h3>Access</h3>
-            <p className="p">Enter the admin key to load tickets.</p>
-            <input
-              className="input"
-              placeholder="ADMIN_KEY"
-              value={adminKey}
-              onChange={(e) => setAdminKey(e.target.value)}
-            />
-            <div style={{ display: "flex", gap: 10, marginTop: 10, flexWrap: "wrap" }}>
-              <button className="btn btn-primary" disabled={!adminKey || busy} onClick={load}>
-                {busy ? "Loading…" : "Load tickets"}
-              </button>
-              <button className="btn" disabled={!adminKey || busy} onClick={() => { setTickets([]); setErr(null); }}>
-                Clear
-              </button>
-            </div>
-            {err && <p style={{ color: "salmon", marginTop: 10 }}>{err}</p>}
-          </div>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <button className={`btn ${status === "open" ? "btn-primary" : ""}`} onClick={() => setStatus("open")}>Open</button>
+          <button className={`btn ${status === "resolved" ? "btn-primary" : ""}`} onClick={() => setStatus("resolved")}>Resolved</button>
+          <button className={`btn ${status === "all" ? "btn-primary" : ""}`} onClick={() => setStatus("all")}>All</button>
 
-          <div className="section">
-            <h3>Filter</h3>
-            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-              <button className={`btn ${status === "open" ? "btn-primary" : ""}`} onClick={() => setStatus("open")}>Open</button>
-              <button className={`btn ${status === "resolved" ? "btn-primary" : ""}`} onClick={() => setStatus("resolved")}>Resolved</button>
-              <button className={`btn ${status === "all" ? "btn-primary" : ""}`} onClick={() => setStatus("all")}>All</button>
-            </div>
-
-            <div style={{ display: "flex", gap: 10, marginTop: 12, flexWrap: "wrap" }}>
-              <span className="pill">Loaded: <b style={{ color: "rgba(255,255,255,.92)" }}>{stats.total}</b></span>
-              <span className="pill">Priority: <b style={{ color: "rgba(255,255,255,.92)" }}>{stats.prio}</b></span>
-            </div>
-
-            <p className="p" style={{ marginTop: 10 }}>
-              Tip: keep filter on <b>Open</b> for daily workflow.
-            </p>
+          <div style={{ marginLeft: "auto", display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <span className="pill">Loaded: <b style={{ color: "rgba(255,255,255,.92)" }}>{stats.total}</b></span>
+            <span className="pill">Priority: <b style={{ color: "rgba(255,255,255,.92)" }}>{stats.prio}</b></span>
           </div>
         </div>
+
+        {err && <p style={{ color: "salmon", marginTop: 12 }}>{err}</p>}
       </div>
 
       <div className="section">
         <h3>Tickets</h3>
 
         {tickets.length === 0 ? (
-          <p className="p">{busy ? "Loading…" : "No tickets loaded."}</p>
+          <p className="p">{busy ? "Loading…" : "No tickets."}</p>
         ) : (
           <div className="grid" style={{ gap: 10 }}>
             {tickets.map(t => (

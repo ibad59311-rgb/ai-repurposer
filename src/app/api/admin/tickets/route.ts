@@ -1,20 +1,12 @@
 ﻿export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
-import { headers } from "next/headers";
 import { sql } from "@/lib/db";
-
-function requireAdmin() {
-  const key = headers().then(h => h.get("x-admin-key"));
-  return key;
-}
+import { requireAdminUserId } from "@/lib/admin";
 
 export async function GET(req: Request) {
-  const ADMIN_KEY = process.env.ADMIN_KEY;
-  const key = (await requireAdmin()) ?? "";
-  if (!ADMIN_KEY || key !== ADMIN_KEY) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const admin = await requireAdminUserId();
+  if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const url = new URL(req.url);
   const status = (url.searchParams.get("status") || "open").toLowerCase();
