@@ -26,7 +26,6 @@ export async function POST(req: Request) {
   const parsed = Schema.safeParse(json);
   if (!parsed.success) return NextResponse.json({ error: "Invalid transcript" }, { status: 400 });
 
-  // Decrement credits atomically-like: only decrement if credits > 0
   const dec = await sql`
     UPDATE users
     SET credits = credits - 1
@@ -36,7 +35,10 @@ export async function POST(req: Request) {
   if (dec.rows.length === 0) return NextResponse.json({ error: "No credits left" }, { status: 402 });
 
   const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) return NextResponse.json({ error: "Missing OPENAI_API_KEY" }, { status: 500 });
+  if (!apiKey) {
+    await sql`UPDATE users SET credits = credits + 1 WHERE id = ${userId}`;
+    return NextResponse.json({ error: "Missing OPENAI_API_KEY" }, { status: 500 });
+  }
 
   const client = new OpenAI({ apiKey });
   const transcript = parsed.data.transcript;
@@ -70,7 +72,6 @@ Transcript:
     });
     text = resp.output_text ?? null;
   } catch {
-    // refund credit on failure
     await sql`UPDATE users SET credits = credits + 1 WHERE id = ${userId}`;
     return NextResponse.json({ error: "OpenAI request failed" }, { status: 502 });
   }

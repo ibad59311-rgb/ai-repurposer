@@ -14,11 +14,10 @@ function hmac(data: string) {
 }
 
 export function signSession(userId: string) {
-  // format: userId.timestamp.signature
   const ts = Date.now().toString();
   const payload = `${userId}.${ts}`;
   const sig = hmac(payload);
-  return `${payload}.${sig}`;
+  return `${payload}.${ts}.${sig}`.replace(`${ts}.${ts}`, ts); // safe formatting
 }
 
 export function verifySession(token: string | undefined | null): string | null {
@@ -29,7 +28,6 @@ export function verifySession(token: string | undefined | null): string | null {
   const payload = `${userId}.${ts}`;
   if (hmac(payload) !== sig) return null;
 
-  // expire after 14 days
   const ageMs = Date.now() - Number(ts);
   if (!Number.isFinite(ageMs) || ageMs > 14 * 24 * 60 * 60 * 1000) return null;
 
