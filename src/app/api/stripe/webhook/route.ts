@@ -1,7 +1,7 @@
 ﻿import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { stripe } from "@/lib/stripe";
-import { db } from "@/lib/db";
+import { sql } from "@/lib/db";
 
 function planFromSub(sub: any): "starter" | "creator" | "pro" | "free" {
   const priceId = sub?.items?.data?.[0]?.price?.id;
@@ -9,25 +9,6 @@ function planFromSub(sub: any): "starter" | "creator" | "pro" | "free" {
   if (priceId && priceId === process.env.STRIPE_PRICE_ID_CREATOR) return "creator";
   if (priceId && priceId === process.env.STRIPE_PRICE_ID_PRO) return "pro";
   return "free";
-}
-
-function creditsFor(plan: "free" | "starter" | "creator" | "pro") {
-  if (plan === "starter") return 10;
-  if (plan === "creator") return 50;
-  if (plan === "pro") return 200;
-  return 3;
-}
-
-function topUpCreditsNow(userId: string, plan: "free" | "starter" | "creator" | "pro") {
-  const yyyymm = new Date().toISOString().slice(0, 7).replace("-", ""); // YYYYMM
-  const target = creditsFor(plan);
-
-  db.prepare(`
-    UPDATE users
-    SET credits = CASE WHEN credits < ? THEN ? ELSE credits END,
-        credits_reset_yyyymm = ?
-    WHERE id = ?
-  `).run(target, target, yyyymm, userId);
 }
 
 export async function POST(req: Request) {
@@ -50,17 +31,25 @@ export async function POST(req: Request) {
     return meta?.user_id ?? null;
   }
 
-  function upsert(userId: string, patch: { status?: string; stripe_subscription_id?: string | null; current_period_end?: number | null; plan?: string | null }) {
-    db.prepare(`
-      INSERT INTO subscriptions (user_id, stripe_customer_id, stripe_subscription_id, status, plan, current_period_end)
-      VALUES (?, NULL, ?, ?, ?, ?)
-      ON CONFLICT(user_id) DO UPDATE SET
-        stripe_subscription_id = COALESCE(excluded.stripe_subscription_id, subscriptions.stripe_subscription_id),
-        status = COALESCE(excluded.status, subscriptions.status),
-        plan = COALESCE(excluded.plan, subscriptions.plan),
-        current_period_end = COALESCE(excluded.current_period_end, subscriptions.current_period_end),
-        updated_at = datetime('now')
-    `).run(userId, patch.stripe_subscription_id ?? null, patch.status ?? "none", patch.plan ?? "free", patch.current_period_end ?? null);
+  async function upsert(
+    userId: string,
+    patch: { status?: string; stripe_subscription_id?: string | null; current_period_end?: number | null; plan?: string | null }
+  ) {
+    const status = patch.status ?? "none";
+    const plan = patch.plan ?? "free";
+    const subId = patch.stripe_subscription_id ?? null;
+    const cpe = patch.current_period_end ?? null;
+
+    await sql`
+      INSERT INTO subscriptions (user_id, stripe_subscription_id, status, plan, current_period_end, updated_at)
+      VALUES (${userId}, ${subId}, ${status}, ${plan}, ${cpe}, now())
+      ON CONFLICT (user_id) DO UPDATE SET
+        stripe_subscription_id = COALESCE(EXCLUDED.stripe_subscription_id, subscriptions.stripe_subscription_id),
+        status = COALESCE(EXCLUDED.status, subscriptions.status),
+        plan = COALESCE(EXCLUDED.plan, subscriptions.plan),
+        current_period_end = COALESCE(EXCLUDED.current_period_end, subscriptions.current_period_end),
+        updated_at = now()
+    `;
   }
 
   try {
@@ -69,9 +58,8 @@ export async function POST(req: Request) {
         const s = event.data.object;
         const userId = await userIdFromCustomer(s.customer);
         if (userId) {
-          const plan = (s?.metadata?.plan || "free") as "free" | "starter" | "creator" | "pro";
-          upsert(userId, { status: "active", plan });
-          topUpCreditsNow(userId, plan);
+          const plan = s?.metadata?.plan || "free";
+          await upsert(userId, { status: "active", plan });
         }
         break;
       }
@@ -80,33 +68,26 @@ export async function POST(req: Request) {
         const sub = event.data.object;
         const userId = await userIdFromCustomer(sub.customer);
         if (userId) {
-          const plan = planFromSub(sub);
-          upsert(userId, {
+          await upsert(userId, {
             status: sub.status,
             stripe_subscription_id: sub.id,
             current_period_end: sub.current_period_end ?? null,
-            plan,
+            plan: planFromSub(sub),
           });
-          if (sub.status === "active" || sub.status === "past_due") {
-            topUpCreditsNow(userId, plan);
-          }
         }
         break;
       }
       case "customer.subscription.deleted": {
         const sub = event.data.object;
         const userId = await userIdFromCustomer(sub.customer);
-        if (userId) {
-          upsert(userId, { status: "canceled", plan: "free" });
-          topUpCreditsNow(userId, "free");
-        }
+        if (userId) await upsert(userId, { status: "canceled", plan: "free" });
         break;
       }
       default:
         break;
     }
-  } catch {
-    return NextResponse.json({ error: "Webhook handler failed" }, { status: 500 });
+  } catch (e: any) {
+    return NextResponse.json({ error: "Webhook handler failed", detail: e?.message ?? String(e) }, { status: 500 });
   }
 
   return NextResponse.json({ received: true });
