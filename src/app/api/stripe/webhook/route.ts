@@ -44,7 +44,7 @@ async function upsertSubscription(userId: string, patch: { status?: string; stri
       status = EXCLUDED.status,
       plan = EXCLUDED.plan,
       current_period_end = COALESCE(EXCLUDED.current_period_end, subscriptions.current_period_end),
-      updated_at = datetime('now')
+      updated_at = NOW()
   `;
 }
 
@@ -135,3 +135,4 @@ export async function POST(req: Request) {
     return NextResponse.json({ received: true });
   }
 }
+
