@@ -1,109 +1,105 @@
 ﻿"use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 type Me = { user: { id: string; email: string; credits: number; plan: "free" | "starter" | "creator" | "pro" } | null };
 
-const PLAN_LABEL: Record<string, string> = {
-  free: "Free (3 / month)",
-  starter: "Starter (10 / month) — £0.99",
-  creator: "Creator (50 / month) — £4.99",
-  pro: "Pro (200 / month) — £14.99",
-};
-
 export default function Dashboard() {
   const [me, setMe] = useState<Me | null>(null);
-  const [loadingTier, setLoadingTier] = useState<string | null>(null);
-  const [billingLoading, setBillingLoading] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
   const router = useRouter();
+  const sp = useSearchParams();
 
-  async function refresh() {
-    const j = await fetch("/api/me").then(r => r.json());
-    setMe(j);
-  }
+  useEffect(() => {
+    fetch("/api/me").then(r => r.json()).then(setMe).catch(() => setMe({ user: null }));
+  }, []);
 
-  useEffect(() => { refresh(); }, []);
+  const u = me?.user;
 
   async function logout() {
     await fetch("/api/auth/logout", { method: "POST" });
     router.push("/");
   }
 
-  async function upgrade(tier: "starter" | "creator" | "pro") {
-    setLoadingTier(tier);
-    const res = await fetch("/api/billing/checkout", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ tier }),
-    });
-    const j = await res.json().catch(() => ({}));
-    setLoadingTier(null);
-    if (!res.ok) return alert(j.error || "Checkout failed");
-    window.location.href = j.url;
+  async function openPortal() {
+    setErr(null);
+    setBusy(true);
+    try {
+      const res = await fetch("/api/billing/portal", { method: "POST" });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok || !j.url) throw new Error(j.error || "Portal request failed");
+      window.location.href = j.url;
+    } catch (e: any) {
+      setErr(e?.message || "Portal request failed");
+    } finally {
+      setBusy(false);
+    }
   }
 
-  async function manageBilling() {
-    setBillingLoading(true);
-    const res = await fetch("/api/billing/portal", { method: "POST" });
-    const j = await res.json().catch(() => ({}));
-    setBillingLoading(false);
-    if (!res.ok) return alert(j.error || "Billing portal failed");
-    window.location.href = j.url;
-  }
-
-  const u = me?.user;
+  const upgraded = sp.get("upgraded") === "1";
 
   return (
-    <main style={{ display: "grid", gap: 12 }}>
-      <h1>Dashboard</h1>
-
-      {!me ? (
-        <p>Loading…</p>
-      ) : !u ? (
-        <p>You are not logged in. Go to <a href="/login">Login</a>.</p>
-      ) : (
-        <>
-          <div style={{ padding: 12, border: "1px solid #ddd", borderRadius: 12 }}>
-            <p style={{ margin: 0 }}><b>Email:</b> {u.email}</p>
-            <p style={{ margin: "6px 0 0" }}><b>Plan:</b> {PLAN_LABEL[u.plan]}</p>
-            <p style={{ margin: "6px 0 0" }}><b>Credits remaining:</b> {u.credits}</p>
-
-            <div style={{ display: "flex", gap: 10, marginTop: 10, flexWrap: "wrap" }}>
-              <button onClick={manageBilling} disabled={billingLoading}>
-                {billingLoading ? "Opening billing…" : "Manage billing / Cancel"}
-              </button>
-              <a href="/generate" style={{ alignSelf: "center" }}>Generate content</a>
-              <button onClick={logout}>Logout</button>
-            </div>
+    <main className="grid fade-in" style={{ gap: 16 }}>
+      <div className="card card-pad">
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+          <div>
+            <h1 className="h2" style={{ marginBottom: 6 }}>Dashboard</h1>
+            <p className="p">Manage your plan and generate content.</p>
           </div>
-
-          <div style={{ padding: 12, border: "1px solid #ddd", borderRadius: 12 }}>
-            <h3 style={{ marginTop: 0 }}>Upgrade</h3>
-            <p style={{ marginTop: 0, color: "#555" }}>
-              Monthly credits reset automatically. Choose a plan that fits your usage.
-            </p>
-
-            <div style={{ display: "grid", gap: 10 }}>
-              <button onClick={() => upgrade("starter")} disabled={loadingTier !== null || u.plan === "starter"}>
-                {u.plan === "starter" ? "Current: Starter" : (loadingTier === "starter" ? "Opening checkout…" : "Starter — £0.99/month (10 credits)")}
-              </button>
-
-              <button onClick={() => upgrade("creator")} disabled={loadingTier !== null || u.plan === "creator"}>
-                {u.plan === "creator" ? "Current: Creator" : (loadingTier === "creator" ? "Opening checkout…" : "Creator — £4.99/month (50 credits)")}
-              </button>
-
-              <button onClick={() => upgrade("pro")} disabled={loadingTier !== null || u.plan === "pro"}>
-                {u.plan === "pro" ? "Current: Pro" : (loadingTier === "pro" ? "Opening checkout…" : "Pro — £14.99/month (200 credits)")}
-              </button>
-            </div>
-
-            <p style={{ marginBottom: 0, marginTop: 10, color: "#777", fontSize: 13 }}>
-              Payments handled securely by Stripe. You can cancel anytime using “Manage billing”.
-            </p>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <a className="btn" href="/generate">Generate</a>
+            <button className="btn" onClick={logout}>Logout</button>
           </div>
-        </>
-      )}
+        </div>
+
+        <hr className="hr" />
+
+        {!me ? (
+          <p className="p">Loading…</p>
+        ) : !u ? (
+          <p className="p">
+            You are not logged in. Go to <a href="/login">Login</a>.
+          </p>
+        ) : (
+          <>
+            {upgraded && <div className="pill" style={{ marginBottom: 12 }}>Subscription updated</div>}
+
+            <div className="split">
+              <div className="section">
+                <h3>Account</h3>
+                <div className="kpi"><span>Email</span> <b>{u.email}</b></div>
+                <div className="kpi" style={{ marginTop: 8 }}><span>Plan</span> <b style={{ textTransform: "capitalize" }}>{u.plan}</b></div>
+                <div className="kpi" style={{ marginTop: 8 }}><span>Credits</span> <b>{u.credits}</b></div>
+              </div>
+
+              <div className="section">
+                <h3>Billing</h3>
+                <p className="p" style={{ marginBottom: 12 }}>
+                  Manage your subscription, invoices, and cancellation in the billing portal.
+                </p>
+
+                <button
+                  className="btn btn-primary"
+                  onClick={openPortal}
+                  disabled={!u || busy}
+                  style={{ width: "100%", justifyContent: "center" }}
+                >
+                  {busy ? "Opening billing portal…" : "Manage billing"}
+                </button>
+
+                <div style={{ display: "flex", gap: 10, marginTop: 10, flexWrap: "wrap" }}>
+                  <a className="btn" href="/pricing">View pricing</a>
+                  <a className="btn" href="/generate">Use generator</a>
+                </div>
+
+                {err && <p style={{ color: "salmon", marginTop: 10 }}>{err}</p>}
+              </div>
+            </div>
+          </>
+        )}
+      </div>
     </main>
   );
 }

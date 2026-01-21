@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 type Output = {
   twitter_thread: string[];
@@ -9,8 +9,7 @@ type Output = {
   youtube_description: string;
 };
 
-type Plan = "free" | "starter" | "creator" | "pro";
-type Me = { user: { credits: number; plan: Plan } | null };
+type Me = { user: { credits: number; plan: "free" | "starter" | "creator" | "pro" } | null };
 
 export default function Generate() {
   const [me, setMe] = useState<Me | null>(null);
@@ -19,20 +18,21 @@ export default function Generate() {
   const [err, setErr] = useState<string | null>(null);
   const [out, setOut] = useState<Output | null>(null);
   const [credits, setCredits] = useState<number | null>(null);
-  const [plan, setPlan] = useState<Plan | null>(null);
+  const [plan, setPlan] = useState<Me["user"] extends infer U ? (U extends { plan: infer P } ? P : never) : never | null>(null);
 
   useEffect(() => {
     fetch("/api/me")
-      .then((r) => r.json())
+      .then(r => r.json())
       .then((j: Me) => {
         setMe(j);
         setCredits(j.user?.credits ?? null);
         setPlan(j.user?.plan ?? null);
-      });
+      })
+      .catch(() => setMe({ user: null }));
   }, []);
 
-  const loggedIn = !!me?.user;
-  const hasCredits = (credits ?? 0) > 0;
+  const chars = transcript.length;
+  const tooShort = chars > 0 && chars < 50;
 
   async function run() {
     setErr(null);
@@ -57,67 +57,92 @@ export default function Generate() {
     setCredits(j.credits);
   }
 
-  return (
-    <main style={{ display: "grid", gap: 12 }}>
-      <h1>Generate</h1>
+  const loggedIn = !!me?.user;
 
-      {!me ? (
-        <p>Loading…</p>
-      ) : !loggedIn ? (
-        <p>You must <a href="/login">login</a> to generate.</p>
-      ) : (
-        <>
-          <div style={{ padding: 12, border: "1px solid #ddd", borderRadius: 12 }}>
-            <p style={{ margin: 0 }}><b>Plan:</b> {plan ?? "—"}</p>
-            <p style={{ margin: "6px 0 0" }}><b>Credits remaining:</b> {credits ?? "—"}</p>
-            {!hasCredits && (
-              <div style={{ marginTop: 10, padding: 10, border: "1px solid #f2c2c2", borderRadius: 10 }}>
-                <p style={{ margin: 0, color: "#8a1f1f" }}>
-                  You have 0 credits left for this month. Please upgrade to continue.
-                </p>
-                <p style={{ margin: "8px 0 0" }}>
-                  Go to <a href="/dashboard">Dashboard</a> to upgrade.
-                </p>
-              </div>
-            )}
+  const cta = useMemo(() => {
+    if (!loggedIn) return { text: "Login required", disabled: true };
+    if (loading) return { text: "Generating…", disabled: true };
+    if (chars < 50) return { text: "Generate", disabled: true };
+    if (credits !== null && credits <= 0) return { text: "No credits left", disabled: true };
+    return { text: "Generate", disabled: false };
+  }, [loggedIn, loading, chars, credits]);
+
+  return (
+    <main className="grid fade-in" style={{ gap: 16 }}>
+      <div className="card card-pad">
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+          <div>
+            <h1 className="h2" style={{ marginBottom: 6 }}>Generate</h1>
+            <p className="p">Paste a transcript and generate platform-ready content.</p>
           </div>
 
-          <textarea
-            value={transcript}
-            onChange={(e) => setTranscript(e.target.value)}
-            placeholder="Paste transcript text here (minimum 50 chars)…"
-            rows={10}
-            style={{ width: "100%", padding: 10 }}
-            disabled={!hasCredits}
-          />
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+            <span className="pill">Plan: <b style={{ color: "rgba(255,255,255,.92)", textTransform: "capitalize" }}>{plan ?? "—"}</b></span>
+            <span className="pill">Credits: <b style={{ color: "rgba(255,255,255,.92)" }}>{credits ?? "—"}</b></span>
+            <a className="btn" href="/pricing">Upgrade</a>
+          </div>
+        </div>
 
-          <button disabled={loading || !hasCredits} onClick={run}>
-            {loading ? "Generating…" : "Generate (uses 1 credit)"}
-          </button>
+        <hr className="hr" />
 
-          {err && <p style={{ color: "crimson" }}>{err}</p>}
+        {!me ? (
+          <p className="p">Loading…</p>
+        ) : !loggedIn ? (
+          <p className="p">You must <a href="/login">login</a> to generate.</p>
+        ) : (
+          <>
+            <div className="composer" style={{ marginTop: 6 }}>
+              <div className="composer-row">
+                <textarea
+                  value={transcript}
+                  onChange={(e) => setTranscript(e.target.value)}
+                  placeholder="Paste transcript text here… (minimum 50 characters)"
+                />
+              </div>
 
-          {out && (
-            <div style={{ display: "grid", gap: 14 }}>
-              <section>
-                <h3>Twitter/X Thread</h3>
-                <ol>
-                  {out.twitter_thread.map((t, i) => <li key={i}>{t}</li>)}
-                </ol>
-              </section>
-              <section>
-                <h3>TikTok / Shorts Script</h3>
-                <pre style={{ whiteSpace: "pre-wrap" }}>{out.tiktok_script}</pre>
-              </section>
-              <section>
-                <h3>YouTube Title</h3>
-                <p>{out.youtube_title}</p>
-                <h3>YouTube Description</h3>
-                <pre style={{ whiteSpace: "pre-wrap" }}>{out.youtube_description}</pre>
-              </section>
+              <div className="composer-meta">
+                <span className="pill">{chars.toLocaleString()} chars {tooShort ? "• needs 50+" : ""}</span>
+                <button className="btn btn-primary" disabled={cta.disabled} onClick={run}>
+                  {cta.text}
+                </button>
+              </div>
             </div>
-          )}
-        </>
+
+            {err && <p style={{ color: "salmon", marginTop: 12 }}>{err}</p>}
+          </>
+        )}
+      </div>
+
+      {out && (
+        <div className="grid" style={{ gap: 14 }}>
+          <div className="section">
+            <h3>Twitter/X Thread</h3>
+            <ul className="thread">
+              {out.twitter_thread.map((t, i) => (
+                <li key={i} className="readable">{t}</li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="split">
+            <div className="section">
+              <h3>TikTok / Shorts Script</h3>
+              <div className="readable">{out.tiktok_script}</div>
+            </div>
+
+            <div className="section">
+              <h3>YouTube</h3>
+              <div style={{ marginBottom: 10 }}>
+                <div className="pill" style={{ marginBottom: 10 }}>Title</div>
+                <div className="readable">{out.youtube_title}</div>
+              </div>
+              <div>
+                <div className="pill" style={{ marginBottom: 10 }}>Description</div>
+                <div className="readable">{out.youtube_description}</div>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </main>
   );
