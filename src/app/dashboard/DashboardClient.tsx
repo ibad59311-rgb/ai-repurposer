@@ -1,5 +1,16 @@
 ﻿"use client";
 
+async function manageBilling() {
+  const res = await fetch("/api/billing/portal", { method: "POST" });
+  const j = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    alert(j?.error || "Could not open billing portal");
+    return;
+  }
+  if (j.url) window.location.href = j.url;
+}
+
+
 import { useEffect, useState } from "react";
 
 );
@@ -89,6 +100,7 @@ export default function DashboardClient() {
     </main>
   );
 }
+
 
 
 
