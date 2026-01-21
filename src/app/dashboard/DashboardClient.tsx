@@ -56,7 +56,8 @@ export default function DashboardClient() {
       {upgraded === "1" && (
         <div className="card card-pad" style={{ borderColor: "rgba(124,58,237,.35)", marginBottom: 12 }}>
           Subscription updated.
-        </div>
+          <button onClick={manageBilling}>Manage billing</button>
+</div>
       )}
       {canceled === "1" && (
         <div className="card card-pad" style={{ borderColor: "rgba(255,255,255,.12)", marginBottom: 12 }}>
@@ -90,4 +91,5 @@ export default function DashboardClient() {
     </main>
   );
 }
+
 
