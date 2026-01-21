@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-async function manageBilling() {
-  const res = await fetch("/api/billing/portal", { method: "POST" });
+);
   const j = await res.json().catch(() => ({}));
   if (!res.ok) {
     alert(j?.error || "Could not open billing portal");
@@ -14,8 +13,7 @@ async function manageBilling() {
 import { useRouter, useSearchParams } from "next/navigation";
 
 
-async function manageBilling() {
-  const res = await fetch("/api/billing/portal", { method: "POST" });
+);
   const j = await res.json().catch(() => ({}));
   if (!res.ok) {
     alert(j?.error || "Could not open billing portal");
@@ -91,5 +89,6 @@ export default function DashboardClient() {
     </main>
   );
 }
+
 
 
